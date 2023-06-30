@@ -1,0 +1,82 @@
+service: lutadores
+frameworkVersion: '3'
+
+provider:
+  name: aws
+  runtime: nodejs18.x
+  stage: ${opt:stage, 'dev'}
+  region: us-east-1
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - dynamodb:Query
+        - dynamodb:Scan
+        - dynamodb:GetItem
+        - dynamodb:PutItem
+        - dynamodb:UpdateItem
+        - dynamodb:DeleteItem
+      Resource: 
+        - "arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.stage}-lutadores"
+        - "arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.stage}-lutadores/index/*"
+
+functions:
+  api:
+    handler: src/create.handler
+    events:
+      - httpApi:
+          path: /create
+          method: post
+  getAll:
+    handler: src/getall.handler
+    events:
+      - httpApi:
+          path: /getall
+          method: get
+  getById:
+    handler: src/getById.handler
+    events:
+      - httpApi:
+          path: /get/{id}
+          method: get
+  edit:
+    handler: src/edit.handler
+    events:
+      - httpApi:
+          path: /edit/{id}
+          method: put
+  delete:
+    handler: src/delete.handler
+    events:
+      - httpApi:
+          path: /delete/{id}
+          method: delete
+
+resources:
+  Resources:
+    lutadoresTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:provider.stage}-lutadores
+        AttributeDefinitions:
+          - AttributeName: id
+            AttributeType: S
+          - AttributeName: nickname
+            AttributeType: S
+        KeySchema:
+          - AttributeName: id
+            KeyType: HASH
+        BillingMode: PAY_PER_REQUEST
+        GlobalSecondaryIndexes:
+          - IndexName: NicknameIndex
+            KeySchema:
+              - AttributeName: nickname
+                KeyType: HASH
+            Projection:
+              ProjectionType: ALL
+
+plugins:
+  - serverless-offline
+
+custom:
+  serverless-offline:
+    httpPort: 4000
